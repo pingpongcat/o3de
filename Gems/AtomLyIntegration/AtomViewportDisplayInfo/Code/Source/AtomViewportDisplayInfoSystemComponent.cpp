@@ -23,6 +23,7 @@
 #include <Atom/RPI.Public/View.h>
 #include <Atom/RHI/Factory.h>
 #include <Atom/RHI/RHISystemInterface.h>
+#include <Atom/RHI/Device.h>
 #include <Atom/RHI/RHIMemoryStatisticsInterface.h>
 #include <Atom/RHI.Reflect/MemoryUsage.h>
 
@@ -93,7 +94,23 @@ namespace AZ::Render
         AZ::Name apiName = AZ::RHI::Factory::Get().GetName();
         if (!apiName.IsEmpty())
         {
-            m_rendererDescription = AZStd::string::format("Atom using %s RHI", apiName.GetCStr());
+            AZStd::string deviceName;
+            if (auto* rhiSystem = AZ::RHI::RHISystemInterface::Get())
+            {
+                if (auto* device = rhiSystem->GetDevice())
+                {
+                    deviceName = device->GetPhysicalDevice().GetDescriptor().m_description;
+                }
+            }
+
+            if (!deviceName.empty())
+            {
+                m_rendererDescription = AZStd::string::format("Atom using %s RHI on %s", apiName.GetCStr(), deviceName.c_str());
+            }
+            else
+            {
+                m_rendererDescription = AZStd::string::format("Atom using %s RHI", apiName.GetCStr());
+            }
         }
 
         AZ::RPI::ViewportContextNotificationBus::Handler::BusConnect(

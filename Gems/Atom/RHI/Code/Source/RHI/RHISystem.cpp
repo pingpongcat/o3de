@@ -13,6 +13,9 @@
 
 #include <AzCore/Debug/Profiler.h>
 #include <AzCore/Interface/Interface.h>
+#include <AzCore/IO/FileIO.h>
+#include <AzCore/IO/SystemFile.h>
+#include <AzCore/Utils/Utils.h>
 
 #include <AzFramework/API/ApplicationAPI.h>
 #include <AzFramework/CommandLine/CommandLine.h>
@@ -146,6 +149,7 @@ namespace AZ::RHI
             bool findPreferredUserDevice = preferredUserAdapterName.size() > 0;
 
             RHI::PhysicalDevice* preferredUserDevice{};
+            RHI::PhysicalDevice* preferredDiscreteDevice{};
             RHI::PhysicalDevice* preferredVendorDevice{};
 
             for (RHI::Ptr<RHI::PhysicalDevice>& physicalDevice : physicalDevices)
@@ -162,8 +166,20 @@ namespace AZ::RHI
                         preferredUserDevice = physicalDevice.get();
                     }
                 }
-                // Record the first nVidia or AMD device we find.
-                if (!preferredVendorDevice && (descriptor.m_vendorId == RHI::VendorId::AMD || descriptor.m_vendorId == RHI::VendorId::nVidia))
+                // Record the first discrete GPU from a preferred vendor (nVidia, AMD, or Intel).
+                if (!preferredDiscreteDevice &&
+                    descriptor.m_type == RHI::PhysicalDeviceType::GpuDiscrete &&
+                    (descriptor.m_vendorId == RHI::VendorId::AMD ||
+                     descriptor.m_vendorId == RHI::VendorId::nVidia ||
+                     descriptor.m_vendorId == RHI::VendorId::Intel))
+                {
+                    preferredDiscreteDevice = physicalDevice.get();
+                }
+                // Record the first nVidia, AMD, or Intel device we find (fallback for integrated).
+                if (!preferredVendorDevice &&
+                    (descriptor.m_vendorId == RHI::VendorId::AMD ||
+                     descriptor.m_vendorId == RHI::VendorId::nVidia ||
+                     descriptor.m_vendorId == RHI::VendorId::Intel))
                 {
                     preferredVendorDevice = physicalDevice.get();
                 }
@@ -178,9 +194,14 @@ namespace AZ::RHI
                 // First, prefer the user specified device if found.
                 physicalDeviceFound = preferredUserDevice;
             }
+            else if (preferredDiscreteDevice)
+            {
+                // Second, prefer discrete GPUs from preferred vendors.
+                physicalDeviceFound = preferredDiscreteDevice;
+            }
             else if (preferredVendorDevice)
             {
-                // Second, prefer specific vendor devices.
+                // Third, prefer any device from preferred vendors (including integrated).
                 physicalDeviceFound = preferredVendorDevice;
             }
             else

@@ -550,7 +550,8 @@ namespace O3DE::ProjectManager
                     editorExecutablePath.String(),
                     AZStd::string::format(R"(--regset="/Amazon/AzCore/Bootstrap/project_path=%s")", fixedProjectPath.c_str())
                 };
-                ;
+                // TODO: Forward RHI-related command line arguments (--forceAdapter, --rhi) to the Editor
+                // See GPU_SELECTION_CHANGES.md for details
                 bool launchSucceeded = AzFramework::ProcessLauncher::LaunchUnwatchedProcess(processLaunchInfo);
                 if (!launchSucceeded)
                 {
